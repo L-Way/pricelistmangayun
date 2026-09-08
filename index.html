@@ -3313,19 +3313,25 @@
       return out;
     }
     function testimoniJenisAcaraLabel(u){
+      // PENTING: label ini WAJIB mencerminkan asal_form yang sebenarnya (bukan
+      // menebak/menyamar sebagai halaman tempat testimoni ini ditampilkan), supaya
+      // kalau suatu saat ada testimoni yang salah dipublikasikan ke halaman ini,
+      // Anda bisa langsung melihat dari label-nya bahwa asalnya bukan dari sini.
       var asal = (u.asal_form || '').toLowerCase();
-      if(asal === 'biodata'){
-        return u.jenis_acara || 'Acara';
-      }
-      if(asal === 'wedding'){
-        return u.jenis_acara || 'Wedding / Patuaekkon';
-      }
       var MAP = {
-        margondang: 'Margondang',
-        prewedding: 'Prewedding',
-        mangayun: 'Mangayun / Aqiqah'
+        wedding:           'Wedding / Patuaekkon',
+        prewedding:        'Prewedding',
+        margondang:        'Margondang',
+        mangayun:          'Mangayun / Aqiqah',
+        wisuda:            'Wisuda',
+        undangan_digital:  'Undangan Digital',
+        biodata:           'Isi Biodata'
       };
-      return MAP[asal] || 'Mangayun / Aqiqah';
+      if(asal === 'wedding' || asal === 'biodata'){
+        return u.jenis_acara || MAP[asal];
+      }
+      if(MAP[asal]) return MAP[asal];
+      return asal ? ('Tidak dikenal (' + asal + ')') : 'Asal tidak diketahui';
     }
     function renderTestimoniList(list){
       var wrap = document.getElementById('testimoniListWrap');
@@ -3358,7 +3364,6 @@
       reviewSupabaseClient
         .from(ULASAN_TABLE)
         .select('*')
-        .eq('dipublikasikan', true)
         .order('created_at', { ascending:false })
         .then(function(res){
           if(res && res.error){
@@ -3366,7 +3371,16 @@
             if(wrap) wrap.innerHTML = '<div class="testimoni-empty">Testimoni belum bisa dimuat saat ini.</div>';
             return;
           }
-          renderTestimoniList(res.data || []);
+          // Tampilkan hanya ulasan yang ditargetkan ke "mangayun" di panel Kelola Publikasi.
+          // publish_targets adalah sumber kebenaran; dipublikasikan (boolean lama) hanya
+          // dipertahankan untuk kompatibilitas pricelist Wedding, jadi tidak dipakai di sini.
+          var filtered = (res.data || []).filter(function(u){
+            var targets = Array.isArray(u.publish_targets)
+              ? u.publish_targets
+              : (u.dipublikasikan ? ['wedding'] : []); // fallback baris lama sebelum publish_targets ada
+            return targets.indexOf('mangayun') !== -1;
+          });
+          renderTestimoniList(filtered);
         })
         .catch(function(err){
           console.error('Gagal memuat testimoni', err);

@@ -2133,7 +2133,7 @@
         </button>
         <p class="form-note" id="downloadSummaryStatus">Wajib diunduh dulu sebelum bisa mengirim ke WhatsApp &mdash; pastikan semua kolom wajib sudah terisi.</p>
 
-        <button type="submit" class="form-submit" id="bkSubmitBtn" disabled>
+        <button type="submit" class="form-submit" id="bkSubmitBtn">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.45 9.9-9.9C21.96 6.45 17.5 2 12.04 2zm0 18.1a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.23 8.24-8.23 4.54 0 8.23 3.7 8.23 8.23 0 4.54-3.7 8.22-8.24 8.22zm4.52-6.16c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.13-.17.24-.64.81-.78.97-.14.17-.29.19-.53.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.22-1.46-1.37-1.7-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.24.24-.4.08-.17.04-.31-.02-.43-.06-.12-.56-1.36-.77-1.86-.2-.49-.4-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.24-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.57.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.16-.48-.28z"/></svg>
           Kirim Data ke WhatsApp
         </button>
@@ -3149,16 +3149,14 @@
 
     function markFormDirty(){
       if(hasDownloadedSummary){
+        // Data berubah setelah gambar diunduh -> gambar lama sudah tidak
+        // sesuai lagi. Tombol kirim TIDAK dimatikan (tetap boleh langsung
+        // kirim ke WhatsApp tanpa unduh ulang) — cuma tanda "downloaded"
+        // di tombol unduh dilepas supaya jelas gambar yang sudah diunduh
+        // itu perlu dibuat ulang kalau mau dilampirkan.
         hasDownloadedSummary = false;
-        var subBtn = document.getElementById('bkSubmitBtn');
-        if(subBtn){ subBtn.disabled = true; }
         var dlBtn = document.getElementById('downloadSummaryBtn');
         if(dlBtn){ dlBtn.classList.remove('downloaded'); }
-        var status = document.getElementById('downloadSummaryStatus');
-        if(status){
-          status.textContent = 'Data diubah — silakan unduh ulang gambar sebelum mengirim ke WhatsApp.';
-          status.className = 'form-note status-error';
-        }
       }
     }
 
@@ -3322,6 +3320,76 @@
       return result;
     }
 
+    // Payload yang dikirim ke Google Apps Script. Dipisah dari fungsi
+    // pengiriman (sendDataToGoogleSheet di bawah) supaya bisa dipakai
+    // ensureSavedToSheet() untuk membuat "tanda tangan" data — dua
+    // panggilan dengan data yang SAMA (misalnya tombol unduh lalu tombol
+    // kirim WA ditekan berurutan) tidak mengirim baris dobel ke sheet.
+    function buildSheetPayload(data){
+      var addonText = data.addons.length
+        ? data.addons.map(function(a){ return a.name + (a.qty > 1 ? ' x' + a.qty : ''); }).join(', ')
+        : 'Tidak ada';
+
+      return {
+        formType: 'Mangayun & Aqiqah',
+        namaPemesan: data.name,
+        noWhatsapp: data.phone,
+        namaAnak: data.childName,
+        igAnak: data.childIg,
+        namaIbu: data.momName,
+        igIbu: data.momIg,
+        namaAyah: data.dadName,
+        igAyah: data.dadIg,
+        paket: data.pkgName,
+        hargaPaket: data.pkgPrice,
+        addOn: addonText,
+        // Data add-on terstruktur, dikirim di samping teks `addOn` di atas
+        // (yang tetap dipertahankan demi kompatibilitas kolom sheet lama),
+        // supaya server BISA menghitung ulang & memvalidasi harga per item.
+        addOnDetail: data.addons.map(function(a){ return { name: a.name, price: a.price, qty: a.qty }; }),
+        pemilihanFoto: data.photoChoice,
+        tanggalAcara: data.dateFormatted,
+        jamAcara: data.time,
+        alamat: data.address,
+        maps: data.maps,
+        igVendor: data.vendors,
+        catatan: data.note,
+        subtotal: data.subtotal,
+        kodeVoucher: data.voucherCode,
+        diskon: data.discount,
+        dp: data.dp,
+        total: data.total,
+        sisaPembayaran: data.remaining
+      };
+    }
+
+    var sheetSync = { signature: null, promise: null, result: null };
+
+    // Data dikirim ke spreadsheet begitu SALAH SATU tombol (unduh gambar
+    // atau kirim ke WhatsApp) ditekan. Supaya menekan keduanya tidak
+    // membuat baris ganda, hasil pengiriman diingat per isi data:
+    //  - data sama & sudah/sedang terkirim  -> pakai hasil yang ada
+    //  - sebelumnya gagal                    -> dicoba kirim lagi
+    //  - data berubah                        -> dikirim sebagai data baru
+    // Mengembalikan Promise<{ok:boolean, reason?:string}>.
+    function ensureSavedToSheet(data){
+      var payload = buildSheetPayload(data);
+      var signature = JSON.stringify(payload);
+      var alreadyHandled = sheetSync.signature === signature && sheetSync.promise &&
+        (sheetSync.result === null || sheetSync.result.ok);
+      if(alreadyHandled){ return sheetSync.promise; }
+
+      payload.waktuKirim = new Date().toLocaleString('id-ID');
+      sheetSync.signature = signature;
+      sheetSync.result = null;
+      var thisPromise = sendDataToGoogleSheet(payload).then(function(result){
+        if(sheetSync.promise === thisPromise){ sheetSync.result = result; }
+        return result;
+      });
+      sheetSync.promise = thisPromise;
+      return thisPromise;
+    }
+
     function handleDownloadSummary(){
       var form = document.getElementById('bookingForm');
       validatePhoneField();
@@ -3346,6 +3414,10 @@
 
       var iosPreviewWindow = isIOS() ? window.open('', '_blank') : null;
 
+      // Data langsung disimpan ke spreadsheet saat tombol unduh ditekan
+      // (berjalan paralel dengan pembuatan gambar, tidak saling menunggu).
+      ensureSavedToSheet(data);
+
       generateAndDownloadSummary(data, iosPreviewWindow, function(result){
         btn.disabled = false;
         btn.innerHTML = originalBtnHTML;
@@ -3353,17 +3425,15 @@
         if(result === 'failed'){
           btn.classList.remove('downloaded');
           hasDownloadedSummary = false;
-          document.getElementById('bkSubmitBtn').disabled = true;
-          status.textContent = 'Gagal membuat gambar ringkasan (koneksi lambat atau library gagal dimuat). Coba lagi sebelum mengirim ke WhatsApp.';
+          status.textContent = 'Gagal membuat gambar ringkasan (koneksi lambat atau library gagal dimuat). Silakan coba lagi, atau langsung kirim ke WhatsApp.';
           status.className = 'form-note status-error';
           return;
         }
 
         btn.classList.add('downloaded');
         hasDownloadedSummary = true;
-        document.getElementById('bkSubmitBtn').disabled = false;
         status.textContent = result === 'auto'
-          ? 'Gambar berhasil diunduh. Sekarang Anda bisa mengirim ke WhatsApp.'
+          ? 'Gambar berhasil diunduh. Anda bisa mengirim ke WhatsApp sekarang, lampirkan gambar ini.'
           : 'Gambar dibuka di tab baru. Tekan & tahan gambarnya, pilih "Simpan ke Foto", lalu kirim ke WhatsApp.';
         status.className = 'form-note status-ok';
         showAttachReminder(result === 'auto');
@@ -3383,50 +3453,13 @@
     // sebagai "gagal" karena responsnya tidak bisa diverifikasi. Kalau itu
     // terjadi, catatan peringatan otomatis disertakan di pesan WhatsApp yang
     // dikirim ke studio supaya tidak ada data yang diam-diam hilang.
-    function sendDataToGoogleSheet(data){
+    function sendDataToGoogleSheet(payload){
       return new Promise(function(resolve){
         if(!GOOGLE_SHEET_WEBAPP_URL || GOOGLE_SHEET_WEBAPP_URL === 'PASTE_URL_WEB_APP_ANDA_DI_SINI'){
           console.warn('GOOGLE_SHEET_WEBAPP_URL belum diisi — data tidak dikirim ke Google Spreadsheet.');
           resolve({ ok: false, reason: 'not-configured' });
           return;
         }
-
-        var addonText = data.addons.length
-          ? data.addons.map(function(a){ return a.name + (a.qty > 1 ? ' x' + a.qty : ''); }).join(', ')
-          : 'Tidak ada';
-
-        var payload = {
-          formType: 'Mangayun & Aqiqah',
-          waktuKirim: new Date().toLocaleString('id-ID'),
-          namaPemesan: data.name,
-          noWhatsapp: data.phone,
-          namaAnak: data.childName,
-          igAnak: data.childIg,
-          namaIbu: data.momName,
-          igIbu: data.momIg,
-          namaAyah: data.dadName,
-          igAyah: data.dadIg,
-          paket: data.pkgName,
-          hargaPaket: data.pkgPrice,
-          addOn: addonText,
-          // Data add-on terstruktur, dikirim di samping teks `addOn` di atas
-          // (yang tetap dipertahankan demi kompatibilitas kolom sheet lama),
-          // supaya server BISA menghitung ulang & memvalidasi harga per item.
-          addOnDetail: data.addons.map(function(a){ return { name: a.name, price: a.price, qty: a.qty }; }),
-          pemilihanFoto: data.photoChoice,
-          tanggalAcara: data.dateFormatted,
-          jamAcara: data.time,
-          alamat: data.address,
-          maps: data.maps,
-          igVendor: data.vendors,
-          catatan: data.note,
-          subtotal: data.subtotal,
-          kodeVoucher: data.voucherCode,
-          diskon: data.discount,
-          dp: data.dp,
-          total: data.total,
-          sisaPembayaran: data.remaining
-        };
 
         var settled = false;
         var safetyTimer = setTimeout(function(){
@@ -3488,26 +3521,27 @@
 
       var submitBtn = document.getElementById('bkSubmitBtn');
       if(submitBtn.disabled){ return; }
-      if(!hasDownloadedSummary){
-        var status = document.getElementById('downloadSummaryStatus');
-        status.textContent = 'Silakan unduh gambar ringkasan terlebih dahulu sebelum mengirim ke WhatsApp.';
-        status.className = 'form-note status-error';
-        return;
-      }
+
+      var form = document.getElementById('bookingForm');
+      validatePhoneField();
+      if(!form.reportValidity()){ return; }
       if(!isDpValid()){
         var dpStatus2 = document.getElementById('downloadSummaryStatus');
         dpStatus2.textContent = 'DP tidak boleh lebih besar dari Total Biaya. Perbaiki dulu nominal DP-nya.';
         dpStatus2.className = 'form-note status-error';
+        document.getElementById('bkDp').focus();
         return;
       }
+
+      var data = collectBookingData();
 
       submitBtn.disabled = true;
       var submitBtnOriginalHTML = submitBtn.innerHTML;
       submitBtn.innerHTML = '<span>Menyimpan data...</span>';
 
-      var data = collectBookingData();
-
-      sendDataToGoogleSheet(data).then(function(saveResult){
+      // Kalau data yang sama sudah tersimpan lewat tombol unduh, tidak
+      // dikirim ulang — hasil pengiriman sebelumnya dipakai.
+      ensureSavedToSheet(data).then(function(saveResult){
         var waMessage = data.message;
         if(!saveResult.ok){
           // Jangan berpura-pura berhasil. Sisipkan peringatan tegas di pesan

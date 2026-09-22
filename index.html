@@ -1492,6 +1492,25 @@
     color:#fff;
     transform:translateY(-1px);
   }
+  .hero-nav-icon-btn{
+    width:34px;height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    background:rgba(255,255,255,0.35);
+    border:1px solid var(--terracotta);
+    color:var(--sage-deep);
+    border-radius:999px;
+    cursor:pointer;
+    transition:background 0.2s ease, transform 0.2s ease;
+  }
+  .hero-nav-icon-btn svg{width:15px;height:15px;flex-shrink:0;}
+  .hero-nav-icon-btn:hover{
+    background:var(--terracotta);
+    color:#fff;
+    transform:translateY(-1px);
+  }
   html{scroll-behavior:smooth;}
 </style>
 </head>
@@ -1563,6 +1582,12 @@
         <button type="button" class="hero-nav-btn" onclick="document.getElementById('nav-addon').scrollIntoView({behavior:'smooth', block:'start'})">Add-On</button>
         <button type="button" class="hero-nav-btn" onclick="goToTerms()">Syarat &amp; Ketentuan</button>
         <button type="button" class="hero-nav-btn" onclick="document.getElementById('nav-ulasan').scrollIntoView({behavior:'smooth', block:'start'})">Testimoni</button>
+        <button type="button" class="hero-nav-icon-btn" id="navCopyDataBtn" aria-label="Salin Data Klien" title="Salin Data Klien" onclick="openCopyDataPopup()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>
+        </button>
+        <button type="button" class="hero-nav-icon-btn" id="navPasteDataBtn" aria-label="Masukkan Data" title="Masukkan Data" onclick="openModal('pasteDataModal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6M9 16h6M9 8h1M13 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l-5-5z"/></svg>
+        </button>
       </div>
     </div>
   </section>
@@ -1810,12 +1835,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
           Isi Formulir Pemesanan
         </button>
-        <button type="button" class="cta-btn cta-btn-outline" onclick="openModal('pasteDataModal')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 12h6M9 16h6M9 8h1M13 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8l-5-5z"/></svg>
-          Masukkan Data
-        </button>
       </div>
-      <p class="cta-note">Sudah punya salinan teks pesanan yang dikirim ke WhatsApp? Tempel di sini untuk membuat ulang gambar ringkasannya.</p>
     </div>
 
     <div class="rule"><div class="line"></div><div class="dot"></div><div class="line"></div></div>
@@ -2122,6 +2142,38 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="copyDataModal">
+    <div class="modal-box">
+      <button type="button" class="modal-close" aria-label="Tutup" onclick="closeCopyDataModal()">&times;</button>
+      <p class="modal-title">Salin Data Klien</p>
+      <p class="modal-sub" id="copyDataModalSub">Masukkan No. WhatsApp yang dipakai saat booking untuk mencari data pesanan yang sudah tersimpan ke spreadsheet. Demi privasi klien lain, data hanya bisa dicari sesuai nomor WhatsApp yang cocok persis — bukan ditampilkan begitu saja.</p>
+
+      <div class="form-field">
+        <label for="copyDataKey">Kode Admin <span style="opacity:.6;font-weight:400;">(kalau diaktifkan)</span></label>
+        <input type="password" id="copyDataKey" autocomplete="off" placeholder="Kosongkan kalau belum diaktifkan" onkeydown="if(event.key==='Enter'){ event.preventDefault(); handleCopyDataSearch(); }">
+      </div>
+      <div class="form-field">
+        <label for="copyDataPhone">No. WhatsApp Pemesan</label>
+        <input type="tel" id="copyDataPhone" inputmode="numeric" autocomplete="tel" placeholder="Contoh: 0812xxxxxxx" onkeydown="if(event.key==='Enter'){ event.preventDefault(); handleCopyDataSearch(); }">
+      </div>
+      <button type="button" class="form-submit" id="copyDataSearchBtn" onclick="handleCopyDataSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Cari Data
+      </button>
+      <p class="form-note" id="copyDataSearchStatus"></p>
+
+      <div class="form-field">
+        <label for="copyDataOutput">Teks Data</label>
+        <textarea id="copyDataOutput" rows="12" readonly placeholder="Hasil pencarian akan muncul di sini." onclick="this.focus();this.select();"></textarea>
+      </div>
+      <button type="button" class="form-submit" id="copyDataConfirmBtn" onclick="handleCopyDataConfirm()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg>
+        Salin ke Clipboard
+      </button>
+      <p class="form-note" id="copyDataStatus"></p>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="pasteDataModal">
     <div class="modal-box">
       <button type="button" class="modal-close" aria-label="Tutup" onclick="document.getElementById('pasteDataModal').classList.remove('open')">&times;</button>
@@ -2188,6 +2240,47 @@
       Signature: 2350000,
       Platinum: 3850000
     };
+
+    // Harga add-on RESMI (sama persis dengan ADDON_PRICES bersama di
+    // Code.gs). Dipakai HANYA untuk fitur "Salin Data Klien": kolom "Add-On"
+    // yang tersimpan di sheet cuma berisi nama+jumlah TANPA harga (mis.
+    // "Cinematic, Album 1 Roll x2"), sementara gambar ringkasan & pesan WA
+    // butuh rincian harga per item. Tabel ini dipakai untuk menyusun ulang
+    // harga tersebut di sisi tampilan — bukan untuk validasi/perhitungan
+    // total (itu tetap tugas server), jadi tidak masalah kalau suatu saat
+    // sedikit basi; paling buruk harga per-item di gambar ringkasan hasil
+    // salin data jadi tidak akurat, TOTAL/SUBTOTAL yang ditampilkan tetap
+    // memakai angka asli yang tersimpan di sheet.
+    var ADDON_PRICES = {
+      'Video Shooting Dokumentasi': 1000000,
+      'Cinematic': 800000,
+      'Cetak Foto 16" + Bingkai': 200000,
+      'Cetak Foto 12" + Bingkai': 70000,
+      'Album 1 Roll': 150000,
+      'Flashdisk 8 GB': 80000,
+      'Flashdisk 16 GB': 95000,
+      'Flashdisk 32 GB': 110000,
+      'Flashdisk 64 GB': 135000,
+      'Flashdisk 128 GB': 235000
+    };
+
+    // "Nama" / "Nama xN" (format tersimpan di kolom sheet, tanpa harga) ->
+    // "Nama (RpXXX)" / "Nama xN (RpXXX)" (format yang dibaca parseBookingText
+    // dan dipakai gambar ringkasan untuk menampilkan harga per item).
+    function reconstructAddonText(raw){
+      raw = (raw || '').trim();
+      if(!raw || raw.toLowerCase() === 'tidak ada'){ return 'Tidak ada'; }
+      return raw.split(',').map(function(part){
+        part = part.trim();
+        if(!part){ return null; }
+        var m = part.match(/^(.*?)(?:\s*x(\d+))?$/);
+        var name = m ? m[1].trim() : part;
+        var qty = (m && m[2]) ? parseInt(m[2], 10) : 1;
+        var unitPrice = ADDON_PRICES.hasOwnProperty(name) ? ADDON_PRICES[name] : null;
+        if(unitPrice === null){ return part; } // nama tidak dikenal — tampilkan apa adanya
+        return name + (qty > 1 ? ' x' + qty : '') + ' (' + formatRupiah(unitPrice * qty) + ')';
+      }).filter(Boolean).join(', ');
+    }
 
     // ---------- voucher: diambil otomatis dari Google Spreadsheet ----------
     // Kode voucher TIDAK perlu diketik manual di sini lagi. Cukup isi/ubah
@@ -2809,6 +2902,179 @@
       });
     }
 
+    // ============================================================
+    // SALIN DATA KLIEN DARI SPREADSHEET
+    // Admin memasukkan No. WhatsApp klien -> Web App (?action=findClient
+    // &form=mangayun) mencari SATU baris data (booking PALING BARU dengan
+    // nomor itu) -> server mengembalikan data mentahnya (field `fields`,
+    // key = nama header sheet "Biodata Mangayun") -> di sini disusun ulang
+    // jadi teks dengan buildMangayunLines(), fungsi YANG SAMA PERSIS dipakai
+    // formulir pemesanan -> hasilnya dijamin bisa dibaca balik oleh
+    // parseBookingText() di menu "Masukkan Data".
+    // (Endpoint findClient dilindungi Kode Admin HANYA KALAU Script
+    // Property ADMIN_KEY sudah diisi di Apps Script — lihat Code.gs.)
+    // ============================================================
+    var COPY_DATA_KEY_STORAGE = 'kaone_admin_key';
+    var copyDataToken = 0;
+
+    function openCopyDataPopup(){
+      var out = document.getElementById('copyDataOutput');
+      var phoneInput = document.getElementById('copyDataPhone');
+      var keyInput = document.getElementById('copyDataKey');
+      var sub = document.getElementById('copyDataModalSub');
+      var status = document.getElementById('copyDataStatus');
+      var searchStatus = document.getElementById('copyDataSearchStatus');
+      status.textContent = '';
+      status.className = 'form-note';
+      searchStatus.textContent = '';
+      searchStatus.className = 'form-note';
+      out.value = '';
+      sub.textContent = 'Masukkan No. WhatsApp yang dipakai saat booking untuk mencari data pesanan yang sudah tersimpan ke spreadsheet. Demi privasi klien lain, data hanya bisa dicari sesuai nomor WhatsApp yang cocok persis — bukan ditampilkan begitu saja.';
+
+      // Kalau form pemesanan di halaman ini sedang/sudah diisi nomor
+      // WhatsApp-nya, isikan otomatis sebagai kemudahan (murni bantuan
+      // pengisian, tetap harus lewat pencarian & pencocokan di server).
+      var bkPhone = document.getElementById('bkPhone');
+      phoneInput.value = bkPhone ? bkPhone.value.trim() : '';
+
+      try {
+        var savedKey = sessionStorage.getItem(COPY_DATA_KEY_STORAGE);
+        if(savedKey && !keyInput.value){ keyInput.value = savedKey; }
+      } catch(e){ /* storage bisa saja diblokir; abaikan */ }
+
+      openModal('copyDataModal');
+      (phoneInput.value ? document.getElementById('copyDataSearchBtn') : phoneInput).focus();
+    }
+
+    function closeCopyDataModal(){
+      document.getElementById('copyDataModal').classList.remove('open');
+    }
+
+    function handleCopyDataSearch(){
+      var phoneInput = document.getElementById('copyDataPhone');
+      var keyInput = document.getElementById('copyDataKey');
+      var out = document.getElementById('copyDataOutput');
+      var sub = document.getElementById('copyDataModalSub');
+      var searchStatus = document.getElementById('copyDataSearchStatus');
+      var status = document.getElementById('copyDataStatus');
+      var btn = document.getElementById('copyDataSearchBtn');
+
+      status.textContent = '';
+      status.className = 'form-note';
+
+      var phone = normalizePhone(phoneInput.value);
+      if(!PHONE_PATTERN.test(phone)){
+        searchStatus.textContent = 'Format No. WhatsApp tidak valid. Contoh: 0812xxxxxxx atau +62812xxxxxxx.';
+        searchStatus.className = 'form-note status-error';
+        phoneInput.focus();
+        return;
+      }
+      if(!GOOGLE_SHEET_WEBAPP_URL || GOOGLE_SHEET_WEBAPP_URL.indexOf('PASTE_') === 0){
+        searchStatus.textContent = 'Web App belum terpasang, pencarian tidak bisa dilakukan.';
+        searchStatus.className = 'form-note status-error';
+        return;
+      }
+
+      var key = keyInput.value.trim();
+      var myToken = ++copyDataToken;
+      out.value = '';
+      btn.disabled = true;
+      var originalBtnHTML = btn.innerHTML;
+      btn.innerHTML = '<span>Mencari...</span>';
+      searchStatus.textContent = 'Mencari data di spreadsheet...';
+      searchStatus.className = 'form-note';
+
+      var controller = window.AbortController ? new AbortController() : null;
+      var timer = setTimeout(function(){ if(controller){ controller.abort(); } }, 15000);
+      var url = GOOGLE_SHEET_WEBAPP_URL + '?action=findClient&form=mangayun&phone=' + encodeURIComponent(phone) +
+        (key ? '&key=' + encodeURIComponent(key) : '');
+
+      fetch(url, { signal: controller ? controller.signal : undefined })
+        .then(function(res){ return res.json(); })
+        .then(function(json){
+          if(myToken !== copyDataToken){ return; }
+
+          if(!json || json.ok === false){
+            searchStatus.textContent = (json && json.message) || 'Gagal mengambil data (server bermasalah). Coba lagi.';
+            searchStatus.className = 'form-note status-error';
+            return;
+          }
+
+          try { if(key){ sessionStorage.setItem(COPY_DATA_KEY_STORAGE, key); } } catch(e){ /* abaikan */ }
+
+          if(!json.found){
+            searchStatus.textContent = 'Tidak ditemukan data pesanan dengan No. WhatsApp tersebut.';
+            searchStatus.className = 'form-note status-error';
+            return;
+          }
+          if(!json.fields){
+            searchStatus.textContent = 'Web App belum mengirim data mentah (`fields`). Pastikan Code.gs sudah versi terbaru, lalu deploy ulang.';
+            searchStatus.className = 'form-note status-error';
+            return;
+          }
+
+          var data = lookupFieldsToFormData(json.fields);
+          if(!data.name && !data.pkgName){
+            console.error('Kolom yang terbaca dari sheet:', Object.keys(json.fields));
+            searchStatus.textContent = 'Data ditemukan, tetapi nama kolom di sheet tidak dikenali (lihat console).';
+            searchStatus.className = 'form-note status-error';
+            return;
+          }
+
+          out.value = buildMangayunLines(data).join('\n');
+          sub.textContent = 'Teks pesanan sesuai data yang tersimpan di spreadsheet untuk No. WhatsApp ini.';
+          searchStatus.textContent = 'Data ditemukan.';
+          searchStatus.className = 'form-note status-ok';
+        })
+        .catch(function(err){
+          if(myToken !== copyDataToken){ return; }
+          searchStatus.textContent = (err && err.name === 'AbortError')
+            ? 'Server terlalu lama merespons. Coba lagi.'
+            : 'Gagal terhubung ke server. Periksa koneksi internet lalu coba lagi.';
+          searchStatus.className = 'form-note status-error';
+        })
+        .then(function(){
+          clearTimeout(timer);
+          if(myToken === copyDataToken){
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHTML;
+          }
+        });
+    }
+
+    // Menyalin ke clipboard; jatuh ke execCommand kalau Clipboard API tidak
+    // tersedia (mis. halaman dibuka lewat http / WebView lama).
+    function copyToClipboard(text, fallbackEl){
+      function fallback(){
+        try {
+          fallbackEl.focus();
+          fallbackEl.select();
+          fallbackEl.setSelectionRange(0, text.length);
+          return document.execCommand('copy');
+        } catch(e){ return false; }
+      }
+      if(navigator.clipboard && window.isSecureContext){
+        return navigator.clipboard.writeText(text).then(function(){ return true; }, function(){ return fallback(); });
+      }
+      return Promise.resolve(fallback());
+    }
+
+    function handleCopyDataConfirm(){
+      var out = document.getElementById('copyDataOutput');
+      var status = document.getElementById('copyDataStatus');
+      var text = out.value;
+      if(!text){ return; }
+      copyToClipboard(text, out).then(function(ok){
+        if(!ok){
+          status.textContent = 'Tidak bisa menyalin otomatis — tekan & tahan teks, pilih Salin.';
+          status.className = 'form-note status-error';
+          return;
+        }
+        status.textContent = 'Teks berhasil disalin. Tempel di menu "Masukkan Data".';
+        status.className = 'form-note status-ok';
+      });
+    }
+
     // onDone menerima salah satu status berikut (BUKAN lagi boolean):
     //   'auto'   -> gambar berhasil dibuat & otomatis terunduh (non-iOS)
     //   'manual' -> gambar berhasil dibuat, dibuka di tab baru untuk disimpan manual (iOS)
@@ -2896,6 +3162,107 @@
       }
     }
 
+    // Menyusun baris pesan WA dari objek data (d) — dipakai formulir SENDIRI
+    // (lewat collectBookingData) dan fitur "Salin Data Klien" (lewat
+    // lookupFieldsToFormData), sehingga hasilnya SELALU dijamin cocok
+    // dengan parseBookingText() di menu "Masukkan Data" — tidak ada dua
+    // tempat terpisah yang bisa berbeda format.
+    function buildMangayunLines(d){
+      var lines = [
+        '*PESANAN BARU - KAONE MOTRET*',
+        '_Mangayun & Aqiqah_',
+        '',
+        '📋 *Data Pemesan*',
+        'Nama Pemesan/Penanggung Jawab: ' + d.name,
+        'No. WhatsApp: ' + d.phone,
+        '',
+        '👶 *Data Keluarga*',
+        'Nama Anak: ' + d.childName,
+        'IG Anak: ' + (d.childIg || '-'),
+        'Nama Ibu: ' + d.momName,
+        'IG Ibu: ' + (d.momIg || '-'),
+        'Nama Ayah: ' + d.dadName,
+        'IG Ayah: ' + (d.dadIg || '-'),
+        '',
+        '📦 *Paket & Add-On*',
+        'Jenis Paket: ' + d.pkgName + ' (' + formatRupiah(d.pkgPrice) + ')',
+        'Paket Add-On: ' + d.addonText,
+        'Pemilihan Foto: ' + d.photoChoice,
+        '',
+        '📅 *Detail Acara*',
+        'Tanggal: ' + d.dateFormatted,
+        'Jam: ' + (d.time || '-'),
+        'Alamat: ' + (d.address || '-'),
+        'Maps: ' + (d.maps || '-'),
+        '',
+        '🧾 *Vendor & Catatan*',
+        'IG All Vendor: ' + (d.vendors || '-'),
+        'Catatan Untuk Fotografer: ' + (d.note || '-'),
+        '',
+        '💰 *Rincian Biaya*',
+        'Subtotal: ' + formatRupiah(d.subtotal)
+      ];
+
+      if(d.voucherCode && d.discount > 0){
+        lines.push('Kode Voucher: ' + d.voucherCode + (d.voucherDesc ? ' (' + d.voucherDesc + ')' : ''));
+        lines.push('Diskon Voucher: -' + formatRupiah(d.discount));
+      }
+      lines.push('DP: ' + formatRupiah(d.dp));
+      lines.push('Total Biaya: *' + formatRupiah(d.total) + '*');
+      lines.push('Sisa Pembayaran: *' + formatRupiah(d.remaining) + '*');
+      return lines;
+    }
+
+    // Satu baris hasil ?action=findClient&form=mangayun (`fields`, key =
+    // nama header sheet "Biodata Mangayun") -> objek bentuk yang dipakai
+    // buildMangayunLines(). Kolom "Add-On" di sheet TIDAK menyimpan harga
+    // per item (lihat reconstructAddonText di atas), jadi disusun ulang
+    // lewat ADDON_PRICES.
+    function lookupFieldsToFormData(f){
+      function get(key){ return (f[key] === undefined || f[key] === null) ? '' : String(f[key]).trim(); }
+      function num(key){
+        var v = f[key];
+        if(typeof v === 'number'){ return isFinite(v) ? Math.round(v) : 0; }
+        var str = String(v || '').replace(/rp/ig, '').replace(/\s/g, '');
+        if(!str){ return 0; }
+        str = str.replace(/(\d)[.,]\d{1,2}$/, '$1');
+        var digits = str.replace(/[^\d]/g, '');
+        return digits ? parseInt(digits, 10) : 0;
+      }
+
+      var pkgName = get('Paket');
+      var total = num('Total');
+      var dp = num('DP');
+      var sisaRaw = get('Sisa Pembayaran');
+
+      return {
+        name: get('Nama Pemesan'),
+        phone: get('No. WhatsApp'),
+        pkgName: pkgName,
+        pkgPrice: num('Harga Paket') || packagePrices[pkgName] || 0,
+        addonText: reconstructAddonText(get('Add-On')),
+        photoChoice: get('Pemilihan Foto') || '-',
+        childName: get('Nama Anak'),
+        childIg: get('IG Anak'),
+        momName: get('Nama Ibu'),
+        momIg: get('IG Ibu'),
+        dadName: get('Nama Ayah'),
+        dadIg: get('IG Ayah'),
+        dateFormatted: get('Tanggal Acara') || '-',
+        time: get('Jam Acara'),
+        address: get('Alamat'),
+        maps: get('Maps'),
+        vendors: get('IG Vendor'),
+        note: get('Catatan'),
+        subtotal: num('Subtotal'),
+        voucherCode: get('Kode Voucher') || '',
+        discount: num('Diskon'),
+        dp: dp,
+        total: total,
+        remaining: sisaRaw ? num('Sisa Pembayaran') : Math.max(0, total - dp)
+      };
+    }
+
     function collectBookingData(){
       var name = document.getElementById('bkName').value.trim();
       var phone = normalizePhone(document.getElementById('bkPhone').value);
@@ -2939,61 +3306,20 @@
         ? addons.map(function(a){ return a.name + (a.qty > 1 ? ' x' + a.qty : '') + ' (' + formatRupiah(a.price * a.qty) + ')'; }).join(', ')
         : 'Tidak ada';
 
-      var lines = [
-        '*PESANAN BARU - KAONE MOTRET*',
-        '_Mangayun & Aqiqah_',
-        '',
-        '📋 *Data Pemesan*',
-        'Nama Pemesan/Penanggung Jawab: ' + name,
-        'No. WhatsApp: ' + phone,
-        '',
-        '👶 *Data Keluarga*',
-        'Nama Anak: ' + childName,
-        'IG Anak: ' + (childIg || '-'),
-        'Nama Ibu: ' + momName,
-        'IG Ibu: ' + (momIg || '-'),
-        'Nama Ayah: ' + dadName,
-        'IG Ayah: ' + (dadIg || '-'),
-        '',
-        '📦 *Paket & Add-On*',
-        'Jenis Paket: ' + pkgName + ' (' + formatRupiah(pkgPrice) + ')',
-        'Paket Add-On: ' + addonText,
-        'Pemilihan Foto: ' + photoChoice,
-        '',
-        '📅 *Detail Acara*',
-        'Tanggal: ' + dateFormatted,
-        'Jam: ' + (time || '-'),
-        'Alamat: ' + (address || '-'),
-        'Maps: ' + (maps || '-'),
-        '',
-        '🧾 *Vendor & Catatan*',
-        'IG All Vendor: ' + (vendors || '-'),
-        'Catatan Untuk Fotografer: ' + (note || '-'),
-        '',
-        '💰 *Rincian Biaya*',
-        'Subtotal: ' + formatRupiah(subtotal)
-      ];
-
-      if(appliedVoucher && discount > 0){
-        lines.push('Kode Voucher: ' + appliedVoucher.code + ' (diskon ' + (appliedVoucher.type === 'percent' ? appliedVoucher.value + '%' : formatRupiah(appliedVoucher.value)) + ')');
-        lines.push('Diskon Voucher: -' + formatRupiah(discount));
-      }
-      lines.push('DP: ' + formatRupiah(dp));
-      lines.push('Total Biaya: *' + formatRupiah(total) + '*');
-      lines.push('Sisa Pembayaran: *' + formatRupiah(remaining) + '*');
-
-      return {
+      var result = {
         name: name, phone: phone,
-        pkgName: pkgName, pkgPrice: pkgPrice, addons: addons,
+        pkgName: pkgName, pkgPrice: pkgPrice, addons: addons, addonText: addonText,
         childName: childName, childIg: childIg, momName: momName, momIg: momIg,
         dadName: dadName, dadIg: dadIg, photoChoice: photoChoice,
         dateFormatted: dateFormatted, time: time, address: address, maps: maps,
         vendors: vendors, note: note, dp: dp,
         subtotal: subtotal, discount: discount,
         voucherCode: appliedVoucher ? appliedVoucher.code : '',
-        total: total, remaining: remaining,
-        message: encodeURIComponent(lines.join('\n'))
+        voucherDesc: appliedVoucher ? ('diskon ' + (appliedVoucher.type === 'percent' ? appliedVoucher.value + '%' : formatRupiah(appliedVoucher.value))) : '',
+        total: total, remaining: remaining
       };
+      result.message = encodeURIComponent(buildMangayunLines(result).join('\n'));
+      return result;
     }
 
     function handleDownloadSummary(){

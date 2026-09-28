@@ -3485,7 +3485,7 @@
       var data = {
         name:'', phone:'', pkgName:'', pkgPrice:0, addons:[],
         childName:'', childIg:'', momName:'', momIg:'', dadName:'', dadIg:'', photoChoice:'-',
-        dateFormatted:'-', time:'', address:'', maps:'', vendors:'', note:'', dp:0,
+        dateFormatted:'-', time:'', address:'', maps:'', pengambilan:'-', ongkir:0, vendors:'', note:'', dp:0,
         subtotal:0, discount:0, voucherCode:'', total:0, remaining:0
       };
       text.split('\n').forEach(function(rawLine){
@@ -3531,8 +3531,16 @@
           case 'jam': data.time = value; break;
           case 'alamat': data.address = value; break;
           case 'maps': data.maps = value; break;
+          case 'pengambilan hasil cetak':
+            var pm = value.match(/^(Diantar|Dijemput)/i);
+            data.pengambilan = pm ? pm[1] : value;
+            break;
           case 'ig all vendor': data.vendors = value; break;
           case 'catatan untuk fotografer': data.note = value; break;
+          case 'ongkos kirim hasil cetak':
+            var om = value.match(/Rp[\d.]+/);
+            data.ongkir = om ? parseRupiah(om[0]) : 0;
+            break;
           case 'kode voucher':
             var vm = value.match(/^(\S+)/);
             data.voucherCode = vm ? vm[1] : value;
@@ -3935,6 +3943,8 @@
         time: get('Jam Acara'),
         address: get('Alamat'),
         maps: get('Maps'),
+        pengambilan: get('Pengambilan Hasil Cetak') || '-',
+        ongkir: num('Ongkir'),
         vendors: get('IG Vendor'),
         note: get('Catatan'),
         subtotal: num('Subtotal'),

@@ -4,6 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Paket Mangayun / Aqiqah</title>
+<meta name="description" content="Dokumentasi profesional untuk momen sakral si kecil — dari prosesi cukur rambut hingga tawa pertama bersama keluarga, diabadikan dengan kehangatan dan detail.">
+
+<!-- Thumbnail saat link dibagikan (WhatsApp, Facebook, Telegram, dll.)
+     Unggah file thumbnail.jpg ke folder yang sama dengan halaman ini,
+     sehingga bisa dibuka di https://mangayun.kaone.web.id/thumbnail.jpg
+     Kalau gambar diganti, naikkan angka ?v= (mis. ?v=2) supaya WhatsApp memuat ulang pratinjaunya. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="KAONE STUDIO">
+<meta property="og:title" content="KAONE STUDIO — Paket Mangayun &amp; Aqiqah">
+<meta property="og:description" content="Dokumentasi profesional untuk momen sakral si kecil — dari prosesi cukur rambut hingga tawa pertama bersama keluarga, diabadikan dengan kehangatan dan detail.">
+<meta property="og:url" content="https://mangayun.kaone.web.id/">
+<meta property="og:image" content="https://mangayun.kaone.web.id/thumbnail.jpg?v=1">
+<meta property="og:image:secure_url" content="https://mangayun.kaone.web.id/thumbnail.jpg?v=1">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Bayi dalam ayunan saat prosesi mangayun - Kaone Motret">
+<meta property="og:locale" content="id_ID">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="KAONE STUDIO — Paket Mangayun &amp; Aqiqah">
+<meta name="twitter:description" content="Dokumentasi profesional untuk momen sakral si kecil — dari prosesi cukur rambut hingga tawa pertama bersama keluarga, diabadikan dengan kehangatan dan detail.">
+<meta name="twitter:image" content="https://mangayun.kaone.web.id/thumbnail.jpg?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Nunito+Sans:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -1622,6 +1645,11 @@
   }
   html{scroll-behavior:smooth;}
 </style>
+<script>
+/* SATU DATABASE: data pesanan/biodata disimpan ke database Kaone Motret (Supabase), sama dengan Rekap Job.
+   Ubah ke true HANYA kalau ingin kembali menyimpan salinan ke Google Spreadsheet (tidak disarankan: harga di Code.gs tidak ikut berubah). */
+var KAONE_SHEET_BACKUP = false;
+</script>
 </head>
 <body>
 
@@ -2296,7 +2324,7 @@
     <div class="modal-box">
       <button type="button" class="modal-close" aria-label="Tutup" onclick="closeCopyDataModal()">&times;</button>
       <p class="modal-title">Salin Data Klien</p>
-      <p class="modal-sub" id="copyDataModalSub">Masukkan No. WhatsApp yang dipakai saat booking untuk mencari data pesanan yang sudah tersimpan ke spreadsheet. Demi privasi klien lain, data hanya bisa dicari sesuai nomor WhatsApp yang cocok persis — bukan ditampilkan begitu saja.</p>
+      <p class="modal-sub" id="copyDataModalSub">Masukkan No. WhatsApp yang dipakai saat booking untuk mencari data pesanan yang sudah tersimpan. Demi privasi klien lain, data hanya bisa dicari sesuai nomor WhatsApp yang cocok persis — bukan ditampilkan begitu saja.</p>
 
       <div class="form-field">
         <label for="copyDataKey">Kode Admin <span style="opacity:.6;font-weight:400;">(kalau diaktifkan)</span></label>
@@ -2447,6 +2475,7 @@
     var vouchersLoadFailed = false;
 
     function loadVoucherDatabase(){
+      if(!KAONE_SHEET_BACKUP){ vouchersLoaded = true; vouchersLoadFailed = false; return; } // voucher dicek per kode ke database Kaone
       if(!GOOGLE_SHEET_WEBAPP_URL || GOOGLE_SHEET_WEBAPP_URL === 'PASTE_URL_WEB_APP_ANDA_DI_SINI'){
         vouchersLoaded = true;
         vouchersLoadFailed = true;
@@ -2605,7 +2634,22 @@
       return Math.min(discount, subtotal);
     }
 
+    var voucherSeq = 0;
+    // Cek kode ke database Kaone Motret (tabel voucher diatur di Rekap Job), lalu pakai logika lama (masa berlaku, pesan, hitung diskon).
     function applyVoucher(){
+      var codeEl = document.getElementById('bkVoucher'), st = document.getElementById('voucherStatus');
+      var code = (codeEl.value || '').trim().toUpperCase();
+      if(!code || KAONE_SHEET_BACKUP){ return applyVoucherOrig(); }
+      codeEl.value = code; st.textContent = 'Memeriksa kode voucher...'; st.className = 'voucher-status';
+      var seq = ++voucherSeq;
+      window.kaoneCekVoucher(code, 'mangayun').then(function(res){
+        if(seq !== voucherSeq) return;
+        voucherDatabase = {}; vouchersLoaded = true; vouchersLoadFailed = false;
+        if(res && res.valid){ voucherDatabase[code] = { type: res.type, value: Number(res.value), validUntil: res.validUntil }; }
+        applyVoucherOrig();
+      }).catch(function(){ if(seq !== voucherSeq) return; vouchersLoaded = true; vouchersLoadFailed = true; applyVoucherOrig(); });
+    }
+    function applyVoucherOrig(){
       var input = document.getElementById('bkVoucher');
       var status = document.getElementById('voucherStatus');
       var code = input.value.trim().toUpperCase();
@@ -3709,7 +3753,7 @@
       searchStatus.textContent = '';
       searchStatus.className = 'form-note';
       out.value = '';
-      sub.textContent = 'Masukkan No. WhatsApp yang dipakai saat booking untuk mencari data pesanan yang sudah tersimpan ke spreadsheet. Demi privasi klien lain, data hanya bisa dicari sesuai nomor WhatsApp yang cocok persis — bukan ditampilkan begitu saja.';
+      sub.textContent = 'Masukkan No. WhatsApp yang dipakai saat booking untuk mencari data pesanan yang sudah tersimpan. Demi privasi klien lain, data hanya bisa dicari sesuai nomor WhatsApp yang cocok persis — bukan ditampilkan begitu saja.';
 
       // Kalau form pemesanan di halaman ini sedang/sudah diisi nomor
       // WhatsApp-nya, isikan otomatis sebagai kemudahan (murni bantuan
@@ -4252,7 +4296,8 @@
     // dikirim ke studio supaya tidak ada data yang diam-diam hilang.
     function sendDataToGoogleSheet(payload){
       // Jalur tambahan: simpan juga ke database Kaone (WhatsApp & Spreadsheet tidak terpengaruh)
-      if(window.kaoneKirimPesanan){ window.kaoneKirimPesanan('mangayun', payload, { nama: payload.namaPemesan, wa: payload.noWhatsapp, tanggal: payload.tanggalAcara }); }
+      var dbHasil = window.kaoneKirimPesanan ? window.kaoneKirimPesanan('mangayun', payload, { nama: payload.namaPemesan, wa: payload.noWhatsapp, tanggal: payload.tanggalAcara }) : Promise.resolve('gagal');
+      if(!KAONE_SHEET_BACKUP){ return dbHasil.then(window.kaoneHasilSimpan); }
       return new Promise(function(resolve){
         if(!GOOGLE_SHEET_WEBAPP_URL || GOOGLE_SHEET_WEBAPP_URL === 'PASTE_URL_WEB_APP_ANDA_DI_SINI'){
           console.warn('GOOGLE_SHEET_WEBAPP_URL belum diisi — data tidak dikirim ke Google Spreadsheet.');
@@ -4347,7 +4392,7 @@
           // WhatsApp itu sendiri, supaya admin studio tahu harus input manual
           // dari pesan ini karena data BELUM pasti masuk ke spreadsheet.
           waMessage += encodeURIComponent(
-            '\n\n⚠️ *PERHATIAN ADMIN:* Data pemesanan ini BELUM terkonfirmasi tersimpan otomatis ke Google Spreadsheet (kemungkinan gangguan server/koneksi). Mohon dicek & diinput manual dari pesan ini.'
+            '\n\n⚠️ *PERHATIAN ADMIN:* Data pemesanan ini BELUM terkonfirmasi tersimpan otomatis ke database Kaone Motret (kemungkinan gangguan server/koneksi). Mohon dicek & diinput manual dari pesan ini.'
           );
         }
         window.open('https://wa.me/' + STUDIO_WA_NUMBER + '?text=' + waMessage, '_blank');
@@ -4739,9 +4784,9 @@
           tanggal_acara: tanggalIso(info.tanggal),
           payload: payload
         };
-        return kirim(baris).then(function(h){ if(h === 'ulang') antri(baris); });
-      }).catch(function(e){ console.warn('Kirim pesanan ke database gagal:', e); });
-    }catch(e){ console.warn(e); return Promise.resolve(); }
+        return kirim(baris).then(function(h){ if(h === 'ulang') antri(baris); return h; });
+      }).catch(function(e){ console.warn('Kirim pesanan ke database gagal:', e); return 'gagal'; });
+    }catch(e){ console.warn(e); return Promise.resolve('gagal'); }
   };
   // Untuk form biodata (isianbiodata): ambil nama / WA / tanggal dari kolom yang ada
   window.kaoneInfoDariFields = function(f){
@@ -4756,5 +4801,93 @@
   window.addEventListener('load', function(){ setTimeout(kirimUlang, 3000); });
 })();
 </script>
+<script>
+/* ===== KAONE: harga pricelist & voucher dari DATABASE Kaone Motret (satu database dengan Rekap Job) =====
+   Harga paket / add-on / biaya akomodasi diatur di aplikasi Rekap Job (Pengaturan > Harga Pricelist) dan
+   voucher di Pengaturan > Voucher Diskon. Angka yang tertulis di halaman ini hanya CADANGAN kalau database
+   tidak bisa dihubungi (mis. offline). Penyimpanan ke Google Spreadsheet dimatikan (KAONE_SHEET_BACKUP=false). */
+(function(){
+  var PAGE = 'mangayun', BASE = 'https://gyleppavsgbtrlgbyztv.supabase.co', KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5bGVwcGF2c2didHJsZ2J5enR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjU0MDQsImV4cCI6MjEwMzM0MTQwNH0.0t7bMoTjgd-c48O37wo1QyGFsFnjrRiAkDzH8VMgw-Q', CK = 'kaone_harga_pricelist_v1';
+  function fmt(n){ return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function setRp(el, n){
+    if(!el) return;
+    if(el.querySelector && el.querySelector('sup')){ el.innerHTML = '<sup>Rp</sup>' + fmt(n); return; }
+    el.textContent = el.textContent.replace(/(Rp\s*)[\d.]+/, '$1' + fmt(n));
+  }
+  function pos(v){ v = Number(v); return v > 0 ? v : 0; }
+  function apply(d){
+    if(!d || typeof d !== 'object') return;
+    var P = (d.paket && d.paket[PAGE]) || {}, C = (d.coret && d.coret[PAGE]) || {}, A = d.addon || {}, L = d.lain || {};
+    window.KAONE_LAIN = L;
+    // 1) kartu paket
+    document.querySelectorAll('.pkg').forEach(function(card){
+      var nm = card.querySelector('.pkg-name'), pr = card.querySelector('.pkg-price');
+      if(nm && pr && pos(P[nm.textContent.trim()])) setRp(pr, P[nm.textContent.trim()]);
+    });
+    document.querySelectorAll('.card').forEach(function(card){
+      var h = card.querySelector('h3'), nw = card.querySelector('.price-new'); if(!h || !nw) return;
+      var n = h.textContent.trim();
+      if(pos(P[n])) setRp(nw, P[n]);
+      var od = card.querySelector('.price-old'); if(od && pos(C[n])) setRp(od, C[n]);
+    });
+    // 2) pilihan paket di form
+    document.querySelectorAll('select option[value]').forEach(function(o){
+      var n = o.value;
+      if(pos(P[n]) && /Rp/.test(o.textContent)){
+        if(o.hasAttribute('data-price')) o.setAttribute('data-price', P[n]);
+        o.textContent = o.textContent.replace(/(Rp\s*)[\d.]+/, '$1' + fmt(P[n]));
+      }
+    });
+    try{ if(typeof PACKAGE_PRICES !== 'undefined'){ Object.keys(P).forEach(function(k){ if(pos(P[k])) PACKAGE_PRICES[k] = P[k]; }); } }catch(e){}
+    // 3) daftar add-on (tampilan)
+    document.querySelectorAll('.addon-row').forEach(function(row){
+      var nm = row.querySelector('.addon-name') || row.querySelector('span'), pr = row.querySelector('.addon-price') || row.querySelector('span:last-child');
+      if(nm && pr && nm !== pr && pos(A[nm.textContent.trim()])) setRp(pr, A[nm.textContent.trim()]);
+    });
+    // 4) add-on di form (data-price dipakai perhitungan total)
+    document.querySelectorAll('[data-price]').forEach(function(el){
+      if(el.tagName === 'OPTION') return;
+      var n = el.getAttribute('data-name') || ((el.type === 'checkbox') ? el.value : '');
+      if(!n || !pos(A[n])) return;
+      el.setAttribute('data-price', A[n]);
+      var box = el.closest('.addon-check, .addon-qty-row') || el.parentNode;
+      if(box && box.querySelectorAll) box.querySelectorAll('em, .amt').forEach(function(t){ if(/Rp/.test(t.textContent)) setRp(t, A[n]); });
+    });
+    try{ if(typeof ADDON_PRICES !== 'undefined'){ Object.keys(A).forEach(function(k){ if(pos(A[k])) ADDON_PRICES[k] = A[k]; }); } }catch(e){}
+    // 5) biaya akomodasi di syarat & ketentuan
+    if(pos(L.akomodasi)){
+      document.querySelectorAll('li').forEach(function(li){
+        if(/biaya akomodasi tambahan sebesar Rp/i.test(li.textContent)) li.innerHTML = li.innerHTML.replace(/(biaya akomodasi tambahan sebesar Rp)[\d.]+/i, '$1' + fmt(L.akomodasi));
+      });
+    }
+    // 6) hitung ulang total di halaman
+    ['recalcTotal', 'updateSummary'].forEach(function(fn){ if(typeof window[fn] === 'function'){ try{ window[fn](); }catch(e){} } });
+  }
+  function ambil(){
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null, t = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 8000);
+    return fetch(BASE + '/rest/v1/kaone_motret_pengaturan_publik?kunci=eq.harga_pricelist&select=nilai&limit=1',
+      { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }, cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function(r){ clearTimeout(t); return r.ok ? r.json() : null; })
+      .then(function(rows){ return rows && rows[0] && rows[0].nilai || null; })
+      .catch(function(){ clearTimeout(t); return null; });
+  }
+  try{ var c = JSON.parse(localStorage.getItem(CK) || 'null'); if(c && c.d) apply(c.d); }catch(e){}
+  ambil().then(function(d){ if(!d) return; apply(d); try{ localStorage.setItem(CK, JSON.stringify({ t: Date.now(), d: d })); }catch(e){} });
+
+  // Voucher: dicek satu per satu oleh database (daftar kode tidak bisa dibaca publik)
+  window.kaoneCekVoucher = function(code, form){
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null, t = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 8000);
+    return fetch(BASE + '/rest/v1/rpc/kaone_voucher_cek', {
+      method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_kode: String(code || ''), p_form: form || PAGE }), signal: ctrl ? ctrl.signal : undefined
+    }).then(function(r){ clearTimeout(t); if(!r.ok) throw new Error('http-' + r.status); return r.json(); });
+  };
+  // Hasil simpan ke database -> bentuk yang dipahami alur halaman ({ok, reason})
+  window.kaoneHasilSimpan = function(h){ return { ok: h === 'ok', reason: h || 'gagal' }; };
+  // "Salin Data Klien" mencari ke Google Spreadsheet; tidak ada lagi data baru di sana, jadi tombolnya disembunyikan
+  if(!window.KAONE_SHEET_BACKUP){ document.querySelectorAll('#navCopyDataBtn, #navPasteSheetBtn, [onclick*="openCopyDataModal"], [onclick*="openCopyDataPopup"]').forEach(function(b){ b.style.display = 'none'; }); }
+})();
+</script>
+
 </body>
 </html>

@@ -2646,7 +2646,10 @@ var KAONE_SHEET_BACKUP = false;
         if(seq !== voucherSeq) return;
         voucherDatabase = {}; vouchersLoaded = true; vouchersLoadFailed = false;
         if(res && res.valid){ voucherDatabase[code] = { type: res.type, value: Number(res.value), validUntil: res.validUntil }; }
+        else if(res && res.reason === 'kadaluarsa'){ voucherDatabase[code] = { type: 'nominal', value: 1, validUntil: '2000-01-01' }; } // pesan "kadaluarsa" bawaan halaman
         applyVoucherOrig();
+        if(res && res.reason === 'habis'){ st.textContent = 'Kuota voucher ini sudah habis.'; }
+        else if(res && res.valid && res.validUntilJam && res.validUntilJam !== '23:59'){ st.textContent += ' Berlaku sampai pukul ' + res.validUntilJam.replace(':', '.') + ' WIB.'; }
       }).catch(function(){ if(seq !== voucherSeq) return; vouchersLoaded = true; vouchersLoadFailed = true; applyVoucherOrig(); });
     }
     function applyVoucherOrig(){
